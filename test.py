@@ -56,87 +56,91 @@ fig,axes=pyplot.subplots()
 scale=special.gammaincinv(numdim,conflevel)
 
 while True:
+    try:
 
-    ind=[]
+        ind=[]
 
-    # Simulate existing targets.
-    for i in target.keys():
-        if random.rand()<survprob:
-            target[i]=random.multivariate_normal(numpy.dot(transgain,target[i]),transnoise)
-            pos,vel=numpy.split(target[i],2)
-            if numpy.all(pos>min(poslim)) and numpy.all(pos<max(poslim)):
-                vel*=min(1.0,maxspeed/max(linalg.norm(vel),maxspeed))
-                target[i]=numpy.concatenate([pos,vel])
-                ind.append(i)
+        # Simulate existing targets.
+        for i in target.keys():
+            if random.rand()<survprob:
+                target[i]=random.multivariate_normal(numpy.dot(transgain,target[i]),transnoise)
+                pos,vel=numpy.split(target[i],2)
+                if numpy.all(pos>min(poslim)) and numpy.all(pos<max(poslim)):
+                    vel*=min(1.0,maxspeed/max(linalg.norm(vel),maxspeed))
+                    target[i]=numpy.concatenate([pos,vel])
+                    ind.append(i)
 
-    target={i:target[i] for i in ind}
+        target={i:target[i] for i in ind}
 
-    # Simulate new targets.
-    for i in range(random.poisson(birthrate)):
-        target[len(target)]=random.multivariate_normal(initmean,initcovar)
+        # Simulate new targets.
+        for i in range(random.poisson(birthrate)):
+            target[len(target)]=random.multivariate_normal(initmean,initcovar)
 
-    obs=[]
+        obs=[]
 
-    # Simulate target measurements.
-    for i in target.keys():
-        if random.rand()<detecprob:
-            obs.append(random.multivariate_normal(numpy.dot(measgain,target[i]),measnoise))
+        # Simulate target measurements.
+        for i in target.keys():
+            if random.rand()<detecprob:
+                obs.append(random.multivariate_normal(numpy.dot(measgain,target[i]),measnoise))
 
-    # Simulate clutter measurements.
-    for i in range(random.poisson(clutterrate)):
-        obs.append(numpy.array([random.uniform(*poslim),
+        # Simulate clutter measurements.
+        for i in range(random.poisson(clutterrate)):
+            obs.append(numpy.array([random.uniform(*poslim),
                                 random.uniform(*poslim)]))
 
-    # Run the filter for a single
-    # prediction-update step.
-    filt.pred()
-    filt.update(numpy.array(obs).transpose())
-    filt.prune(maxhypot=10)
+        # Run the filter for a single
+        # prediction-update step.
+        filt.pred()
+        filt.update(numpy.array(obs).transpose())
+        filt.prune(maxhypot=10)
 
-    axes.cla()
+        axes.cla()
 
-    for weight,mean,covar in filt:
+        for weight,mean,covar in filt:
 
-        # Decompose the dispersion matrix of the position.
-        eigval,eigvec=linalg.eigh(covar[numpy.ix_([0,1],[0,1])])
+            # Decompose the dispersion matrix of the position.
+            eigval,eigvec=linalg.eigh(covar[numpy.ix_([0,1],[0,1])])
 
-        width,height=numpy.sqrt(eigval)
-        angle=numpy.degrees(numpy.arctan2(*eigvec[:,0][::-1]))
+            width,height=numpy.sqrt(eigval)
+            angle=numpy.degrees(numpy.arctan2(*eigvec[:,0][::-1]))
 
-        # Create an ellipse depicting the position uncertainty.
-        ellip=patches.Ellipse(xy=mean[numpy.ix_([0,1])],
-                              width=scale*width,
-                              height=scale*height,
-                              angle=angle,
-                              alpha=min(max(weight,0.0),1.0),
-                              facecolor='blue',
-                              edgecolor='none')
+            # Create an ellipse depicting the position uncertainty.
+            ellip=patches.Ellipse(xy=mean[numpy.ix_([0,1])],
+                                  width=scale*width,
+                                  height=scale*height,
+                                  angle=angle,
+                                  alpha=min(max(weight,0.0),1.0),
+                                  facecolor='blue',
+                                  edgecolor='none')
 
-        axes.add_artist(ellip)
+            axes.add_artist(ellip)
 
-    if target:
+        if target:
 
-        # Plot the targets.
-        x,y,u,v=zip(*target.values())
-        axes.quiver(x,y,u,v,
-                    color='red',
-                    scale_units='xy',
-                    angles='xy',
-                    scale=10.0/36.0,
-                    zorder=100)
+            # Plot the targets.
+            x,y,u,v=zip(*target.values())
+            axes.quiver(x,y,u,v,
+                        color='red',
+                        scale_units='xy',
+                        angles='xy',
+                        scale=10.0/36.0,
+                        zorder=100)
 
-    if obs:
+        if obs:
 
-        # Plot the observations.
-        x,y=zip(*obs)
-        axes.plot(x,y,
-                  color='black',
-                  marker='x',
-                  markersize=5.0,
-                  linestyle='none')
+            # Plot the observations.
+            x,y=zip(*obs)
+            axes.plot(x,y,
+                      color='black',
+                      marker='x',
+                      markersize=5.0,
+                      linestyle='none')
 
-    axes.set_xlim(*poslim)
-    axes.set_ylim(*poslim)
+        axes.set_xlim(*poslim)
+        axes.set_ylim(*poslim)
 
-    fig.show()
-    pyplot.pause(0.25)
+        fig.show()
+        pyplot.pause(0.25)
+
+    except KeyboardInterrupt:
+        break
