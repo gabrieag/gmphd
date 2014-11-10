@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+
+# Python implementation of the Gaussian mixture probability
+# hypothesis density (GM-PHD) filter. This code is based on
+# the description in Vo and Ma (2006).
+#
+# B. N. Vo and W. K. Ma, "The Gaussian mixture probability
+# hypothesis density filter," IEEE Transactions on Signal
+# Processing, 54(11):4091--4104, 2006.
 
 import math,numpy
 
@@ -5,7 +14,20 @@ from numpy import linalg,random
 
 class filt():
 
+    """
+    This class represents the parameters of the GM-PHD filter, and
+    the current estimate given all the data observed so far.
+    """
+
     class hypot():
+
+        """
+        This class represents a single component in the intensity
+        function. The intensity function is a mixture of Gaussian
+        probability density functions. Note that the intensity is
+        not a probability density function, hence the component
+        weights are not required to sum to one.
+        """
 
         def __init__(self,weight,mean,covar):
 
@@ -14,6 +36,11 @@ class filt():
             self.covar=covar
 
         def div(self,*other):
+
+            """
+            Evaluate the Kullback-Leibler (KL) divergence with
+            respect to other mixture components.
+            """
 
             # Pre-compute the Cholesky factor of the
             # covariance, and its log-determinant.
@@ -33,6 +60,11 @@ class filt():
 
         def merge(self,*other):
 
+            """
+            Merge the mixture components by matching the first-
+            and second-order moments, i.e. the mean and covariance.
+            """
+
             # Compute the weighted sums.
             self.mean*=self.weight
             self.covar*=self.weight
@@ -51,6 +83,12 @@ class filt():
 
     def __init__(self,initmean,initcovar,transgain,transnoise,measgain,measnoise,clutterdens,
                  birthrate=0.0,clutterrate=0.0,survprob=1.0,detecprob=1.0):
+
+        """
+        Create a GM-PHD model with the given parameters. The parameters
+        specify the birth, transition and measurement processes, and the
+        clutter. Note that this class does not feature a spawning process.
+        """
 
         # Check the initial mean.
         if numpy.ndim(initmean)!=1:
@@ -132,11 +170,19 @@ class filt():
 
     def __iter__(self):
 
+        """
+        Iterate over the components of the intensity function.
+        """
+
         # Iterate over the hypotheses.
         for hypot in self.__hypot__:
             yield hypot.weight,hypot.mean,hypot.covar
 
     def pred(self):
+
+        """
+        Propagate the intensity function forwards in time.
+        """
 
         # Propagate the existing hypotheses.
         for i,hypot in enumerate(self.__hypot__):
@@ -151,6 +197,12 @@ class filt():
                                          self.initcovar.copy()))
 
     def update(self,obs,tol=1.0e-9):
+
+        """
+        Update the intensity function given a set of observations.
+        The input argument 'obs' must be a matrix, with one column
+        for each observation vector.
+        """
 
         numstate,numobs=self.__size__
         numhypot=len(self.__hypot__)
@@ -218,6 +270,12 @@ class filt():
                     self.__hypot__.append(filt.hypot(weight,mean[:,j,i],covar[:,:,i]))
 
     def prune(self,truncthres=1.0e-2,mergethres=1.0,maxhypot=100):
+
+        """
+        Prune the intensity function by removing Gaussian
+        components with low weight, and then iteratively
+        merging components with a small KL divergence.
+        """
 
         __hypot__=[]
 
