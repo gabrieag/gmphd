@@ -18,7 +18,7 @@ transnoise=5.0
 measnoise=10.0
 
 birthrate=0.1
-cluttrate=50.0
+clutterrate=50.0
 survprob=0.99
 detecprob=0.99
 
@@ -46,7 +46,7 @@ def clutter(obs):
 
 # Instantiate the filter.
 filt=gmphd.filt(initmean,initcovar,transgain,transnoise,measgain,measnoise,clutter,
-                birthrate,cluttrate,survprob,detecprob)
+                birthrate,clutterrate,survprob,detecprob)
 
 target={0:random.multivariate_normal(initmean,initcovar)}
 
@@ -83,7 +83,7 @@ while True:
             obs.append(random.multivariate_normal(numpy.dot(measgain,target[i]),measnoise))
 
     # Simulate clutter measurements.
-    for i in range(random.poisson(cluttrate)):
+    for i in range(random.poisson(clutterrate)):
         obs.append(numpy.array([random.uniform(*poslim),
                                 random.uniform(*poslim)]))
 
