@@ -50,7 +50,7 @@ class filt():
                 self.covar/=self.weight
 
     def __init__(self,initmean,initcovar,transgain,transnoise,measgain,measnoise,clutterdens,
-                 birthrate=0.0,cluttrate=0.0,survprob=1.0,detecprob=1.0):
+                 birthrate=0.0,clutterrate=0.0,survprob=1.0,detecprob=1.0):
 
         # Check the initial mean.
         if numpy.ndim(initmean)!=1:
@@ -105,7 +105,7 @@ class filt():
         # Check the parameters.
         if not numpy.isscalar(birthrate) or birthrate<0.0:
             raise Exception("Birth rate must be a non-negative scalar.")
-        if not numpy.isscalar(cluttrate) or cluttrate<0.0:
+        if not numpy.isscalar(clutterrate) or clutterrate<0.0:
             raise Exception("Clutter rate must be a non-negative scalar.")
         if not numpy.isscalar(survprob) or survprob<0.0 or survprob>1.0:
             raise Exception("Survival probability must be a scalar between {} and {}.".format(0.0,1.0))
@@ -123,7 +123,7 @@ class filt():
 
         # Set the parameters.
         self.birthrate=birthrate
-        self.cluttrate=cluttrate
+        self.clutterrate=clutterrate
         self.survprob=survprob
         self.detecprob=detecprob
 
@@ -205,7 +205,7 @@ class filt():
 
         for j in range(numpoint):
 
-            loginten=numpy.log(self.cluttrate*self.clutterdens(obs[:,j]))
+            loginten=numpy.log(self.clutterrate*self.clutterdens(obs[:,j]))
 
             # Update the log-scale factor.
             logscale[j]=max(logscale[j],loginten)+math.log1p(math.exp(-abs(logscale[j]-loginten)))
