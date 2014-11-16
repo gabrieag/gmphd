@@ -80,8 +80,8 @@ for frame in range(min(names.keys()),max(names.keys())):
         # Perform a prediction-update step.
         filt.pred()
         if frame in detections:
-            obs=numpy.array(detections[frame],dtype=float)
-            filt.update(obs[:,:numdim].transpose(),numpy.spacing(1.0))
+            obs=numpy.array(detections[frame],dtype=float).transpose()
+            filt.update(obs[:numdim,:],numpy.spacing(1.0))
         filt.prune(truncthres=truncthres,
                    mergethres=mergethres,
                    maxhypot=maxhypot)
