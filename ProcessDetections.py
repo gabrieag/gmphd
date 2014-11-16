@@ -16,12 +16,15 @@ sampfreq=20.0
 numdim=2
 maxpos=500.0
 maxvel=10.0
-accelnoise=1.0
+accelnoise=5.0
 obsnoise=10.0
 birthrate=0.01
 clutterrate=1.0
 survprob=0.99
 detecprob=0.95
+truncthres=1.0e-12
+mergethres=0.5
+maxhypot=20
 
 names=collections.defaultdict(list)
 detections=collections.defaultdict(list)
@@ -79,9 +82,9 @@ for frame in range(min(names.keys()),max(names.keys())):
         if frame in detections:
             obs=numpy.array(detections[frame],dtype=float)
             filt.update(obs[:,:numdim].transpose(),numpy.spacing(1.0))
-        filt.prune(truncthres=1.0e-9,
-                   mergethres=1.0,
-                   maxhypot=20)
+        filt.prune(truncthres=truncthres,
+                   mergethres=mergethres,
+                   maxhypot=maxhypot)
 
         axes.cla()
 
