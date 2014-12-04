@@ -81,8 +81,8 @@ class filt():
                 self.covar+=hypot.weight*numpy.outer(diff,diff)
                 self.covar/=self.weight
 
-    def __init__(self,initmean,initcovar,transgain,transnoise,measgain,measnoise,clutterdens,
-                 birthrate=0.0,clutterrate=0.0,survprob=1.0,detecprob=1.0):
+    def __init__(self,initweight,initmean,initcovar,transgain,transnoise,measgain,measnoise,
+                 clutterdens=lambda x:0.0,birthrate=0.0,clutterrate=0.0,survprob=1.0,detecprob=1.0):
 
         """
         Create a GM-PHD model with the given parameters. The parameters
@@ -90,21 +90,34 @@ class filt():
         clutter. Note that this class does not feature a spawning process.
         """
 
-        # Check the initial mean.
-        if numpy.ndim(initmean)!=1:
-            raise Exception('Initial mean must be a vector.')
+        # Check the initial weight.
+        if numpy.ndim(initweight)!=1:
+            raise Exception('Initial weight must be a vector.')
+        if numpy.any(initweight<0.0):
+            raise Exception('Initial weights must be non-negative.')
+        if not numpy.allclose(initweight.sum(),1.0):
+            raise Exception('Initial weights must sum to one.')
 
-        numstate=numpy.size(initmean)
+        numcomp,=numpy.shape(initweight)
+
+        # Check the initial mean.
+        try:
+            numstate,numcol=numpy.shape(initmean)
+        except ValueError:
+            raise Exception('Initial mean must be a matrix.')
+        if numcol!=numcomp:
+            raise Exception('Initial mean must have {} columns.'.format(numcomp))
 
         # Check the initial covariance.
-        if numpy.ndim(initcovar)!=2 or numpy.shape(initcovar)!=(numstate,numstate):
-            raise Exception('Initial covariance must be a {}-by-{} matrix.'.format(numstate,numstate))
-        if not numpy.allclose(numpy.transpose(initcovar),initcovar):
-            raise Exception('Initial covariance matrix must be symmetric.')
-        try:
-            cholfact=linalg.cholesky(initcovar)
-        except linalg.LinAlgError:
-            raise Exception('Initial covariance matrix must be positive-definite.')
+        if numpy.ndim(initcovar)!=3 or numpy.shape(initcovar)!=(numstate,numstate,numcomp):
+            raise Exception('Initial covariance must be a {}-by-{}-by{} array.'.format(numstate,numstate,numcomp))
+        for i in range(numcomp):
+            if not numpy.allclose(numpy.transpose(initcovar[:,:,i]),initcovar[:,:,i]):
+                raise Exception('Initial covariance matrices must be symmetric.')
+            try:
+                cholfact=linalg.cholesky(initcovar[:,:,i])
+            except linalg.LinAlgError:
+                raise Exception('Initial covariance matrices must be positive-definite.')
 
         # Check the transition gain.
         if numpy.ndim(transgain)!=2 or numpy.shape(transgain)!=(numstate,numstate):
@@ -151,6 +164,7 @@ class filt():
             raise Exception("Detection probability must be a scalar between {} and {}.".format(0.0,1.0))
 
         # Set the model.
+        self.initweight=numpy.asarray(initweight)
         self.initmean=numpy.asarray(initmean)
         self.initcovar=numpy.asarray(initcovar)
         self.transgain=numpy.asarray(transgain)
@@ -191,10 +205,11 @@ class filt():
             hypot.covar=numpy.dot(numpy.dot(self.transgain,hypot.covar),
                                   self.transgain.transpose())+self.transnoise
 
-        # Create a new hypothesis.
-        self.__hypot__.append(filt.hypot(self.birthrate,
-                                         self.initmean.copy(),
-                                         self.initcovar.copy()))
+        # Create a new set of hypotheses.
+        for i,weight in enumerate(self.initweight):
+            self.__hypot__.append(filt.hypot(self.birthrate*weight,
+                                             self.initmean[:,i].copy(),
+                                             self.initcovar[:,:,i].copy()))
 
     def update(self,obs,tol=1.0e-9):
 

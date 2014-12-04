@@ -22,9 +22,10 @@ clutterrate=50.0
 survprob=0.99
 detecprob=0.99
 
-# Create the initial mean and covariance.
-initmean=numpy.kron(numpy.array([0.0,0.0]),numpy.ones(numdim))
-initcovar=numpy.kron(initnoise**2*numpy.diag([1.0,1.0/4.0]),numpy.eye(numdim))
+# Create the initial weight, mean and covariance.
+initweight=numpy.array([1.0])
+initmean=numpy.kron(numpy.array([0.0,0.0]),numpy.ones(numdim)).reshape([2*numdim,1])
+initcovar=numpy.kron(initnoise**2*numpy.diag([1.0,1.0/4.0]),numpy.eye(numdim)).reshape([2*numdim,2*numdim,1])
 
 # Create the transition gain and noise.
 transgain=numpy.kron(numpy.array([(1.0,timestep),(0.0,1.0)]),numpy.eye(numdim))
@@ -45,10 +46,11 @@ def clutter(obs):
         return 0.0
 
 # Instantiate the filter.
-filt=gmphd.filt(initmean,initcovar,transgain,transnoise,measgain,measnoise,clutter,
-                birthrate,clutterrate,survprob,detecprob)
+filt=gmphd.filt(initweight,initmean,initcovar,transgain,transnoise,measgain,measnoise,
+                clutter,birthrate,clutterrate,survprob,detecprob)
 
-target={0:random.multivariate_normal(initmean,initcovar)}
+i=initweight.cumsum().searchsorted(random.rand())
+target={0:random.multivariate_normal(initmean[:,i],initcovar[:,:,i])}
 
 # Create a figure and a pair of axes.
 fig,axes=pyplot.subplots()
@@ -74,7 +76,8 @@ while True:
 
         # Simulate new targets.
         for i in range(random.poisson(birthrate)):
-            target[len(target)]=random.multivariate_normal(initmean,initcovar)
+            j=initweight.cumsum().searchsorted(random.rand())
+            target[len(target)]=random.multivariate_normal(initmean[:,j],initcovar[:,:,j])
 
         obs=[]
 
