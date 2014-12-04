@@ -45,9 +45,10 @@ with open(path.join(abspath,'detection.txt'),mode='r') as file:
 
 if numdim==2:
 
-    # Create the initial mean and covariance.
-    initmean=numpy.array([float(imwidth)/2.0,float(imheight)/2.0,0.0,0.0])
-    initcovar=numpy.diag(numpy.array([maxpos,maxpos,maxvel,maxvel])**2)
+    # Create the initial weights, means and covariances.
+    initweight=numpy.array([0.5,0.5])
+    initmean=numpy.array([(0.0,float(imwidth)),(float(imheight),float(imheight)),(0.0,0.0),(0.0,0.0)])
+    initcovar=numpy.diag(numpy.array([maxpos,maxpos,maxvel,maxvel])**2)[:,:,numpy.newaxis].repeat(2,axis=2)
 
     timestep=1.0/sampfreq
 
@@ -65,8 +66,8 @@ area=imwidth*imheight
 clutterdens=lambda x:1.0/float(area)
 
 # Instantiate the filter.
-filt=gmphd.filt(initmean,initcovar,transgain,transnoise,measgain,measnoise,clutterdens,
-                birthrate,clutterrate,survprob,detecprob)
+filt=gmphd.filt(initweight,initmean,initcovar,transgain,transnoise,measgain,measnoise,
+                clutterdens,birthrate,clutterrate,survprob,detecprob)
 
 scale=special.gammaincinv(numdim,0.99)
 
@@ -81,6 +82,7 @@ for frame in range(min(names.keys()),max(names.keys())):
         filt.pred()
         if frame in detections:
             obs=numpy.array(detections[frame],dtype=float).transpose()
+            obs[:2,:]+=obs[2:,:]/2.0
             filt.update(obs[:numdim,:],numpy.spacing(1.0))
         filt.prune(truncthres=truncthres,
                    mergethres=mergethres,
