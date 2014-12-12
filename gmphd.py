@@ -2,7 +2,7 @@
 
 # Python implementation of the Gaussian mixture probability
 # hypothesis density (GM-PHD) filter. This code is based on
-# the description in Vo and Ma (2006).
+# the article by Vo and Ma (2006).
 #
 # B. N. Vo and W. K. Ma, "The Gaussian mixture probability
 # hypothesis density filter," IEEE Transactions on Signal
@@ -110,7 +110,7 @@ class filt():
 
         # Check the initial covariance.
         if numpy.ndim(initcovar)!=3 or numpy.shape(initcovar)!=(numstate,numstate,numcomp):
-            raise Exception('Initial covariance must be a {}-by-{}-by{} array.'.format(numstate,numstate,numcomp))
+            raise Exception('Initial covariance must be a {}-by-{}-by-{} array.'.format(numstate,numstate,numcomp))
         for i in range(numcomp):
             if not numpy.allclose(numpy.transpose(initcovar[:,:,i]),initcovar[:,:,i]):
                 raise Exception('Initial covariance matrices must be symmetric.')
@@ -259,7 +259,7 @@ class filt():
 
             # Construct the Kalman and Joseph gain matrices.
             kalmgain=linalg.solve(innovcovar,kalmgain.transpose()).transpose()
-            josgain=numpy.eye(numstate)-kalmgain.dot(self.measgain)
+            josgain=numpy.eye(numstate)-numpy.dot(kalmgain,self.measgain)
 
             # Compute the conditional mean and covariance.
             mean[:,:,i]=numpy.dot(josgain,hypot.mean[:,numpy.newaxis])+numpy.dot(kalmgain,obs)
